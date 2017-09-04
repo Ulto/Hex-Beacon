@@ -43,4 +43,29 @@ Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
+$Sheet
+S 3000 2300 1400 1300
+U 59AC571E
+F0 "ESP32" 60
+F1 "ESP32.sch" 60
+F2 "ESP_SPI" B R 4400 2600 60 
+$EndSheet
+$Sheet
+S 5950 2300 1450 1300
+U 59AC5A80
+F0 "STM32" 60
+F1 "STM32.sch" 60
+$EndSheet
+$Sheet
+S 3350 4950 2150 1000
+U 59ADA955
+F0 "PSU" 60
+F1 "PSU.sch" 60
+$EndSheet
+$Sheet
+S 7000 4650 2850 1150
+U 59ADAAF7
+F0 "APA102" 60
+F1 "APA102.sch" 60
+$EndSheet
 $EndSCHEMATC

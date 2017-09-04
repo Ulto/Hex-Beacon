@@ -28,77 +28,13 @@ LIBS:opto
 LIBS:atmel
 LIBS:contrib
 LIBS:valves
-LIBS:crumpschemes
-LIBS:ESP32-footprints-Shem-Lib
-LIBS:espressif-xess
-LIBS:74xgxx
-LIBS:ac-dc
-LIBS:actel
-LIBS:allegro
-LIBS:Altera
-LIBS:analog_devices
-LIBS:battery_management
-LIBS:bbd
-LIBS:bosch
-LIBS:brooktre
-LIBS:cmos_ieee
-LIBS:dc-dc
-LIBS:diode
-LIBS:elec-unifil
-LIBS:ESD_Protection
-LIBS:ftdi
-LIBS:gennum
-LIBS:graphic
-LIBS:hc11
-LIBS:ir
-LIBS:Lattice
-LIBS:leds
-LIBS:logo
-LIBS:maxim
-LIBS:mechanical
-LIBS:microchip_dspic33dsc
-LIBS:microchip_pic10mcu
-LIBS:microchip_pic12mcu
-LIBS:microchip_pic16mcu
-LIBS:microchip_pic18mcu
-LIBS:microchip_pic24mcu
-LIBS:microchip_pic32mcu
-LIBS:modules
-LIBS:motor_drivers
-LIBS:motors
-LIBS:msp430
-LIBS:nordicsemi
-LIBS:nxp
-LIBS:nxp_armmcu
-LIBS:onsemi
-LIBS:Oscillators
-LIBS:Power_Management
-LIBS:powerint
-LIBS:pspice
-LIBS:references
-LIBS:relays
-LIBS:rfcom
-LIBS:sensors
-LIBS:silabs
-LIBS:stm8
-LIBS:stm32
-LIBS:supertex
-LIBS:switches
-LIBS:transf
-LIBS:triac_thyristor
-LIBS:ttl_ieee
-LIBS:video
-LIBS:wiznet
-LIBS:Worldsemi
-LIBS:Xicor
-LIBS:zetex
-LIBS:Zilog
-LIBS:Beacons-cache
+LIBS:STM32F042C6T6
+LIBS:Hex-Beacons-cache
 EELAYER 25 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
-Sheet 1 3
+Sheet 1 5
 Title ""
 Date ""
 Rev ""
@@ -109,15 +45,28 @@ Comment3 ""
 Comment4 ""
 $EndDescr
 $Sheet
-S 3050 2350 1400 1300
+S 3000 2300 1400 1300
 U 59AC571E
 F0 "ESP32" 60
 F1 "ESP32.sch" 60
+F2 "ESP_SPI" B R 4400 2600 60 
 $EndSheet
 $Sheet
-S 5850 2350 1450 1300
+S 5950 2300 1450 1300
 U 59AC5A80
 F0 "STM32" 60
 F1 "STM32.sch" 60
+$EndSheet
+$Sheet
+S 3350 4950 2150 1000
+U 59ADA955
+F0 "PSU" 60
+F1 "PSU.sch" 60
+$EndSheet
+$Sheet
+S 7000 4650 2850 1150
+U 59ADAAF7
+F0 "APA102" 60
+F1 "APA102.sch" 60
 $EndSheet
 $EndSCHEMATC
