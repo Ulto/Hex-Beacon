@@ -29,10 +29,11 @@ LIBS:atmel
 LIBS:contrib
 LIBS:valves
 LIBS:STM32F042C6T6
+LIBS:crumpschemes
 LIBS:Hex-Beacons-cache
 EELAYER 25 0
 EELAYER END
-$Descr A4 11693 8268
+$Descr B 17000 11000
 encoding utf-8
 Sheet 2 5
 Title ""

@@ -29,6 +29,7 @@ LIBS:atmel
 LIBS:contrib
 LIBS:valves
 LIBS:STM32F042C6T6
+LIBS:crumpschemes
 LIBS:Hex-Beacons-cache
 EELAYER 25 0
 EELAYER END
