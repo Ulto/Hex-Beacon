@@ -68,18 +68,18 @@ uint8_t APA102_Strip[APA102_STRIP_UPDATE_PACKET_BYTES] = {0};
 // APA102_stripStatus - Global status of APA102 strip.  Primarily used to indicate whether a strip update is currently underway.
 typedef enum
 {
-  APA102_UNKNOWN   = 0x00U,
-  APA102_ERROR     = 0x01U,
-  APA102_IDLE      = 0x05U,
-  APA102_UPDATING  = 0x06U
+  APA102_UNKNOWN,
+  APA102_ERROR,
+  APA102_IDLE,
+  APA102_UPDATING
 } APA102_stripStatus;
 APA102_stripStatus APA102_stripStatus1 = APA102_UNKNOWN;
 
 // APA102_result - Return status for APA102 related function calls.
 typedef enum
 {
-  APA102_SUCCESS   = 0x00U,
-  APA102_FAILURE   = 0x01U
+  APA102_SUCCESS,
+  APA102_FAILURE
 } APA102_result;
 
 /* USER CODE END PV */
@@ -112,6 +112,12 @@ void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef * hspi);
  */
 APA102_result APA102_Update()
 {
+	// Confirm that update isn't already underway.
+	if (APA102_stripStatus1 == APA102_UPDATING)
+	{
+		return APA102_SUCCESS;
+	}
+
 	// Indicate that APA102 strip update is underway.
     APA102_stripStatus1 = APA102_UPDATING;
 
@@ -289,6 +295,7 @@ int main(void)
 	  APA102_Update();
 	  HAL_Delay(500);
 	  APA102_SetStrip(0, 1, 1);
+	  APA102_Update();
 	  APA102_Update();
 	  HAL_Delay(500);
 
