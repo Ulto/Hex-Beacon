@@ -1,4 +1,4 @@
-update=9/4/2017 1:59:57 PM
+update=9/4/2017 4:07:49 PM
 version=1
 last_client=kicad
 [general]
@@ -61,3 +61,4 @@ LibName27=atmel
 LibName28=contrib
 LibName29=valves
 LibName30=D:/Documents/KiCad/Libraries/STM32F042C6T6
+LibName31=D:/Dropbox/crumpschemes

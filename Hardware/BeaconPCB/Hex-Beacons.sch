@@ -29,6 +29,7 @@ LIBS:atmel
 LIBS:contrib
 LIBS:valves
 LIBS:STM32F042C6T6
+LIBS:crumpschemes
 LIBS:Hex-Beacons-cache
 EELAYER 25 0
 EELAYER END
@@ -73,7 +74,7 @@ F0 "PSU" 60
 F1 "PSU.sch" 60
 $EndSheet
 $Sheet
-S 7000 4650 2850 1150
+S 7000 4650 2250 1250
 U 59ADAAF7
 F0 "APA102" 60
 F1 "APA102.sch" 60
