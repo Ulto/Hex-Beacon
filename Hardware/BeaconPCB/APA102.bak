@@ -35,7 +35,7 @@ EELAYER 25 0
 EELAYER END
 $Descr B 17000 11000
 encoding utf-8
-Sheet 5 5
+Sheet 5 6
 Title ""
 Date ""
 Rev ""
@@ -275,4 +275,12 @@ Wire Wire Line
 	11350 1600 11450 1600
 Wire Wire Line
 	11350 1750 11450 1750
+Text HLabel 1650 1600 0    60   Input ~ 0
+SPI2_MOSI
+Wire Wire Line
+	1650 1600 2150 1600
+Wire Wire Line
+	2150 1750 1650 1750
+Text HLabel 1650 1750 0    60   Input ~ 0
+SPI2_SCLK
 $EndSCHEMATC
