@@ -58,19 +58,18 @@ DMA_HandleTypeDef hdma_spi3_tx;
 // === APA102 Strip Configurable Parameters ===
 #define APA102_STRIPLEN           144     // Length of APA102 LED Strip
 #define APA102_SPI_HANDLE         hspi2   // SPI port connected to APA102 LED Strip
-
-#define APA102_MAX_CURRENT        100     // mA
-#define APA102_CHANNEL_CURRENT    20      // mA
+#define APA102_MAX_CURRENT        1000    // Max current available for entire strip. (mA)
+#define APA102_CHANNEL_CURRENT    20      // Current consumed by each channel (color). (mA)
 
 
 // === APA102 Strip Protocol Parameters ===
-#define APA102_BYTES_PER_PIXEL   4
-#define APA102_START_FRAME_BYTES 4
-#define APA102_END_FRAME_BYTES   12
+#define APA102_BYTES_PER_PIXEL           4
+#define APA102_START_FRAME_BYTES         4
+#define APA102_END_FRAME_BYTES           12
 #define APA102_STRIP_UPDATE_PACKET_BYTES (APA102_START_FRAME_BYTES + (APA102_STRIPLEN * APA102_BYTES_PER_PIXEL) + APA102_END_FRAME_BYTES)
-uint8_t APA102_StartFrameByte                          = {0b00000000};
-uint8_t APA102_EndFrameByte                            = {0b11111111};
-uint8_t APA102_Strip[APA102_STRIP_UPDATE_PACKET_BYTES] = {0};
+uint8_t APA102_StartFrameByte                                 = {0b00000000};
+uint8_t APA102_EndFrameByte                                   = {0b11111111};
+uint8_t APA102_Strip[APA102_STRIP_UPDATE_PACKET_BYTES]        = {0};
 uint8_t APA102_Strip_Buffer[APA102_STRIP_UPDATE_PACKET_BYTES] = {0};	// Buffer strip updates so that the strip array can be edited during DMA output operations.
 #define APA102_MAX_STRIP_LENGTH  (APA102_START_FRAME_BYTES + (UINT_MAX / APA102_BYTES_PER_PIXEL) + APA102_END_FRAME_BYTES)
 
@@ -117,7 +116,8 @@ uint8_t Intensity_To_Current(uint8_t);
 
 
 /*
- * APA102_Update - Initiates DMA transmit of current pixel data.
+ * APA102_Update - Initiates DMA transmit of current pixel data.  Scales channel brightness to fit
+ *                 within specified available power (APA102_MAX_CURRENT).
  *  arguments:
  *    returns: Status flag based on HAL status.  Failures are not considered
  *             show-stopping based on streaming nature of a typical implementation.
@@ -129,7 +129,6 @@ APA102_result APA102_Update()
 	float    scalingFactor   = 0;
 	uint32_t position        = 0;
 	uint32_t pixel           = 0;
-
 
 	// Confirm that update isn't already underway.
 	if (APA102_stripStatus1 == APA102_UPDATING)
@@ -157,7 +156,7 @@ APA102_result APA102_Update()
     	if (requiredCurrent > APA102_MAX_CURRENT)
     	{
     		// Determine Scaling Factor
-    		scalingFactor = (float) APA102_MAX_CURRENT / (float) requiredCurrent;
+    		scalingFactor = ((float) APA102_MAX_CURRENT / (float) requiredCurrent);
 
     		// Apply Scaling Factor
         	for (pixel = 0; pixel < APA102_STRIPLEN; pixel++)
@@ -170,7 +169,6 @@ APA102_result APA102_Update()
     			APA102_Strip[position + 2] *= scalingFactor; 	// GRN Channel
 				APA102_Strip[position + 3] *= scalingFactor; 	// BLU Channel
         	}
-
     	}
 
     // Copy pixel data into output buffer.
@@ -178,7 +176,6 @@ APA102_result APA102_Update()
 
     // Initiate DMA transmit of current pixel data.  Check HAL return status.
 	if (HAL_SPI_Transmit_DMA(&APA102_SPI_HANDLE, APA102_Strip_Buffer, APA102_STRIP_UPDATE_PACKET_BYTES) != HAL_OK)
-    //if (HAL_SPI_Transmit(&APA102_SPI_HANDLE, APA102_Strip_Buffer, APA102_STRIP_UPDATE_PACKET_BYTES, 500) != HAL_OK)
 	{
 		APA102_stripStatus1 = APA102_ERROR;
 		return APA102_FAILURE;
@@ -291,9 +288,11 @@ APA102_result APA102_SetStrip(uint8_t red, uint16_t grn, uint16_t blu)
 
 
 /*
- * Brightness_To_Current -
- *  arguments:
- *    returns:
+ * Intensity_To_Current - Calculates channel current consumption based on specified intensity. Currently assumes
+ *                         linear relationship between intensity and current draw. May be turned into a macro if
+ *                         linear relationship assumption is kept long term.
+ *  arguments: Intensity of a single pixel color (channel).
+ *    returns: Calculated current needs of the given single pixel color (channel).
  */
 uint8_t Intensity_To_Current(uint8_t channelIntensity)
 {
@@ -307,9 +306,14 @@ uint8_t Intensity_To_Current(uint8_t channelIntensity)
 }
 
 
-void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef * hspi)
+/*
+ * HAL_SPI_TxCpltCallback - HAL callback function for completed SPI Tx.
+ *  arguments: Relevant SPI port handle.
+ *    returns: N/A
+ */
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef * hspi)
 {
-	// Indicate that APA102 strip update is complete.
+	// Set flag indicating that APA102 strip update is complete.
     if (hspi == &APA102_SPI_HANDLE)
     {
     	APA102_stripStatus1 = APA102_IDLE;
@@ -323,7 +327,7 @@ void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef * hspi)
 uint8_t RxFlag = 0;
 void HAL_SPI_RxCpltCallback (SPI_HandleTypeDef * hspi)
 {
-	// Indicate that APA102 strip update is complete.
+	//
     if (hspi == &hspi3)
     {
     	RxFlag = 0;
@@ -379,13 +383,16 @@ int main(void)
   /* USER CODE BEGIN 3 */
 
 
-	  APA102_SetStrip(0, 0, 255);
+
+	  APA102_SetStrip(255, 255, 255);
 	  APA102_Update();
 	  HAL_Delay(500);
+
 
 	  APA102_SetStrip(0, 255, 0);
 	  APA102_Update();
 	  HAL_Delay(500);
+
 
 	  /*
 	  //

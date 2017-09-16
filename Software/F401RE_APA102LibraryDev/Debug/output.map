@@ -3429,7 +3429,7 @@ OUTPUT(APA102_LibDMA1.elf elf32-littlearm)
  .debug_line    0x00005e70      0x7c9 Src/system_stm32f4xx.o
  .debug_line    0x00006639       0x7f startup/startup_stm32f401xe.o
 
-.debug_str      0x00000000    0x7e95d
+.debug_str      0x00000000    0x7e95e
  .debug_str     0x00000000    0x7cafb Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.o
                               0x7ce74 (size before relaxing)
  .debug_str     0x0007cafb      0x3fd Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.o
@@ -3442,13 +3442,13 @@ OUTPUT(APA102_LibDMA1.elf elf32-littlearm)
                               0x7c94c (size before relaxing)
  .debug_str     0x0007da6a      0x6c3 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_spi.o
                               0x7cd1e (size before relaxing)
- .debug_str     0x0007e12d      0x73b Src/main.o
-                              0x7d5cb (size before relaxing)
- .debug_str     0x0007e868       0x1b Src/stm32f4xx_hal_msp.o
+ .debug_str     0x0007e12d      0x73c Src/main.o
+                              0x7d5cc (size before relaxing)
+ .debug_str     0x0007e869       0x1b Src/stm32f4xx_hal_msp.o
                               0x7cd31 (size before relaxing)
- .debug_str     0x0007e883       0x80 Src/stm32f4xx_it.o
+ .debug_str     0x0007e884       0x80 Src/stm32f4xx_it.o
                               0x7c646 (size before relaxing)
- .debug_str     0x0007e903       0x5a Src/system_stm32f4xx.o
+ .debug_str     0x0007e904       0x5a Src/system_stm32f4xx.o
                               0x7c55e (size before relaxing)
 
 .comment        0x00000000       0x6e
