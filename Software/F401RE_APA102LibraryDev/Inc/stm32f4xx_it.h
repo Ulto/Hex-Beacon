@@ -46,7 +46,9 @@
 /* Exported functions ------------------------------------------------------- */
 
 void SysTick_Handler(void);
+void DMA1_Stream0_IRQHandler(void);
 void DMA1_Stream4_IRQHandler(void);
+void DMA1_Stream5_IRQHandler(void);
 
 #ifdef __cplusplus
 }

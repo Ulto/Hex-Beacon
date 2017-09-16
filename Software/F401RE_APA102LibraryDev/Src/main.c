@@ -41,19 +41,27 @@
 
 /* USER CODE BEGIN Includes */
 #include "APA102.h"
-#include "limits.h"
+#include "limits.h" // data type info / sizes
+#include <string.h> // memcpy
 
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi2;
+SPI_HandleTypeDef hspi3;
 DMA_HandleTypeDef hdma_spi2_tx;
+DMA_HandleTypeDef hdma_spi3_rx;
+DMA_HandleTypeDef hdma_spi3_tx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 // === APA102 Strip Configurable Parameters ===
-#define APA102_STRIPLEN   144      // Length of APA102 LED Strip
-#define APA102_SPI_HANDLE hspi2    // SPI port connected to APA102 LED Strip
+#define APA102_STRIPLEN           144     // Length of APA102 LED Strip
+#define APA102_SPI_HANDLE         hspi2   // SPI port connected to APA102 LED Strip
+
+#define APA102_MAX_CURRENT        100     // mA
+#define APA102_CHANNEL_CURRENT    20      // mA
+
 
 // === APA102 Strip Protocol Parameters ===
 #define APA102_BYTES_PER_PIXEL   4
@@ -63,7 +71,9 @@ DMA_HandleTypeDef hdma_spi2_tx;
 uint8_t APA102_StartFrameByte                          = {0b00000000};
 uint8_t APA102_EndFrameByte                            = {0b11111111};
 uint8_t APA102_Strip[APA102_STRIP_UPDATE_PACKET_BYTES] = {0};
+uint8_t APA102_Strip_Buffer[APA102_STRIP_UPDATE_PACKET_BYTES] = {0};	// Buffer strip updates so that the strip array can be edited during DMA output operations.
 #define APA102_MAX_STRIP_LENGTH  (APA102_START_FRAME_BYTES + (UINT_MAX / APA102_BYTES_PER_PIXEL) + APA102_END_FRAME_BYTES)
+
 
 // APA102_stripStatus - Global status of APA102 strip.  Primarily used to indicate whether a strip update is currently underway.
 typedef enum
@@ -89,6 +99,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_SPI2_Init(void);
+static void MX_SPI3_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -97,6 +108,7 @@ APA102_result APA102_Init(void);
 APA102_result APA102_SetPixel(uint32_t, uint8_t, uint16_t, uint16_t);
 APA102_result APA102_SetStrip(uint8_t, uint16_t, uint16_t);
 void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef * hspi);
+uint8_t Intensity_To_Current(uint8_t);
 
 
 /* USER CODE END PFP */
@@ -112,6 +124,13 @@ void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef * hspi);
  */
 APA102_result APA102_Update()
 {
+	// Variable Declarations
+	uint32_t requiredCurrent = 0;
+	float    scalingFactor   = 0;
+	uint32_t position        = 0;
+	uint32_t pixel           = 0;
+
+
 	// Confirm that update isn't already underway.
 	if (APA102_stripStatus1 == APA102_UPDATING)
 	{
@@ -121,8 +140,45 @@ APA102_result APA102_Update()
 	// Indicate that APA102 strip update is underway.
     APA102_stripStatus1 = APA102_UPDATING;
 
-    // Initiates DMA transmit of current pixel data.  Check HAL return status.
-	if (HAL_SPI_Transmit_DMA(&APA102_SPI_HANDLE, APA102_Strip, APA102_STRIP_UPDATE_PACKET_BYTES) != HAL_OK)
+    // Check power requirements and scale to suit.
+    	// Calculate power needs of current frame.
+    	for (pixel = 0; pixel < APA102_STRIPLEN; pixel++)
+    	{
+			// Calculate desired pixel data's position in the strip array.
+			position = (APA102_START_FRAME_BYTES + (pixel * APA102_BYTES_PER_PIXEL));
+
+			// Convert intensity value into current consumption and add to tally.
+			requiredCurrent += Intensity_To_Current(APA102_Strip[position + 1]);	// RED Channel
+			requiredCurrent += Intensity_To_Current(APA102_Strip[position + 2]);	// GRN Channel
+			requiredCurrent += Intensity_To_Current(APA102_Strip[position + 3]);	// BLU Channel
+    	}
+
+    	// Determine scaling factor and scale back, if needed.
+    	if (requiredCurrent > APA102_MAX_CURRENT)
+    	{
+    		// Determine Scaling Factor
+    		scalingFactor = (float) APA102_MAX_CURRENT / (float) requiredCurrent;
+
+    		// Apply Scaling Factor
+        	for (pixel = 0; pixel < APA102_STRIPLEN; pixel++)
+        	{
+    			// Calculate desired pixel data's position in the strip array.
+    			position = (APA102_START_FRAME_BYTES + (pixel * APA102_BYTES_PER_PIXEL));
+
+    			// Convert intensity value into current consumption and add to tally.
+    			APA102_Strip[position + 1] *= scalingFactor; 	// RED Channel
+    			APA102_Strip[position + 2] *= scalingFactor; 	// GRN Channel
+				APA102_Strip[position + 3] *= scalingFactor; 	// BLU Channel
+        	}
+
+    	}
+
+    // Copy pixel data into output buffer.
+    memcpy(APA102_Strip_Buffer, APA102_Strip, APA102_STRIP_UPDATE_PACKET_BYTES);
+
+    // Initiate DMA transmit of current pixel data.  Check HAL return status.
+	if (HAL_SPI_Transmit_DMA(&APA102_SPI_HANDLE, APA102_Strip_Buffer, APA102_STRIP_UPDATE_PACKET_BYTES) != HAL_OK)
+    //if (HAL_SPI_Transmit(&APA102_SPI_HANDLE, APA102_Strip_Buffer, APA102_STRIP_UPDATE_PACKET_BYTES, 500) != HAL_OK)
 	{
 		APA102_stripStatus1 = APA102_ERROR;
 		return APA102_FAILURE;
@@ -234,12 +290,43 @@ APA102_result APA102_SetStrip(uint8_t red, uint16_t grn, uint16_t blu)
 }
 
 
+/*
+ * Brightness_To_Current -
+ *  arguments:
+ *    returns:
+ */
+uint8_t Intensity_To_Current(uint8_t channelIntensity)
+{
+	// (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+
+	uint8_t channelCurrent;
+
+	channelCurrent = (channelIntensity - 0) * (APA102_CHANNEL_CURRENT - 0) / (255 - 0) + 0;
+
+	return channelCurrent;
+}
+
+
 void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef * hspi)
 {
 	// Indicate that APA102 strip update is complete.
     if (hspi == &APA102_SPI_HANDLE)
     {
     	APA102_stripStatus1 = APA102_IDLE;
+    }
+
+}
+
+
+
+//
+uint8_t RxFlag = 0;
+void HAL_SPI_RxCpltCallback (SPI_HandleTypeDef * hspi)
+{
+	// Indicate that APA102 strip update is complete.
+    if (hspi == &hspi3)
+    {
+    	RxFlag = 0;
     }
 
 }
@@ -275,10 +362,11 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_SPI2_Init();
+  MX_SPI3_Init();
 
   /* USER CODE BEGIN 2 */
   APA102_Init();
-  APA102_Update();
+
 
   /* USER CODE END 2 */
 
@@ -291,42 +379,40 @@ int main(void)
   /* USER CODE BEGIN 3 */
 
 
-	  APA102_SetStrip(0, 0, 0);
-	  APA102_Update();
-	  HAL_Delay(500);
-	  APA102_SetStrip(0, 1, 1);
-	  APA102_Update();
+	  APA102_SetStrip(0, 0, 255);
 	  APA102_Update();
 	  HAL_Delay(500);
 
-
+	  APA102_SetStrip(0, 255, 0);
+	  APA102_Update();
+	  HAL_Delay(500);
 
 	  /*
-	  APA102_SetPixel(10, 0, 0, 255);
-	  APA102_SetPixel(100, 0, 0, 255);
-	  APA102_SetPixel(144, 0, 0, 255);
-	  APA102_SetPixel(143, 0, 0, 255);
-	  APA102_SetPixel(142, 0, 0, 255);
-	  APA102_SetPixel(141, 0, 0, 255);
-	  APA102_SetPixel(140, 0, 0, 255);
-	  APA102_Update();
-	  HAL_Delay(500);
-	  APA102_SetPixel(10, 255, 0, 0);
-	  APA102_SetPixel(100, 255, 0, 0);
-	  APA102_SetPixel(144, 255, 0, 0);
-	  APA102_SetPixel(143, 255, 0, 0);
-	  APA102_SetPixel(142, 255, 0, 0);
-	  APA102_SetPixel(141, 255, 0, 0);
-	  APA102_SetPixel(140, 255, 0, 0);
-	  APA102_Update();
-	  //APA102_Update();
-	  HAL_Delay(500);
-      */
+	  //
+	  uint8_t packet[7] = {0};
 
+	  //
+	  if (RxFlag == 0)
+	  {
+	      RxFlag = 1;
+          HAL_SPI_Receive_DMA(&hspi3, packet, 6);
+	  }
 
+	  //
+	  if (packet[2] != 0)
+	  {
+		  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 
-	  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+		  packet[0] = 0;
+		  packet[1] = 0;
+		  packet[2] = 0;
+		  packet[3] = 0;
+		  packet[4] = 0;
+		  packet[5] = 0;
+		  packet[6] = 0;
 
+	  }
+	  */
 
 
   }
@@ -401,12 +487,34 @@ static void MX_SPI2_Init(void)
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi2.Init.CRCPolynomial = 10;
   if (HAL_SPI_Init(&hspi2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* SPI3 init function */
+static void MX_SPI3_Init(void)
+{
+
+  hspi3.Instance = SPI3;
+  hspi3.Init.Mode = SPI_MODE_SLAVE;
+  hspi3.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi3.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi3.Init.NSS = SPI_NSS_SOFT;
+  hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi3.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi3) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -422,9 +530,15 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
+  /* DMA1_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
   /* DMA1_Stream4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+  /* DMA1_Stream5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
 
 }
 
