@@ -287,4 +287,26 @@ Connection ~ 6050 4950
 Wire Wire Line
 	6050 5700 8200 5700
 Connection ~ 8200 3000
+Wire Wire Line
+	6350 4050 5250 4050
+Text HLabel 5250 4050 0    60   Output ~ 0
+PI_SS
+$Comp
+L +5V #PWR?
+U 1 1 59D1D63E
+P 8250 1750
+F 0 "#PWR?" H 8250 1600 50  0001 C CNN
+F 1 "+5V" H 8250 1890 50  0000 C CNN
+F 2 "" H 8250 1750 50  0001 C CNN
+F 3 "" H 8250 1750 50  0001 C CNN
+	1    8250 1750
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8000 2100 8250 2100
+Wire Wire Line
+	8250 1750 8250 2250
+Wire Wire Line
+	8250 2250 8000 2250
+Connection ~ 8250 2100
 $EndSCHEMATC
