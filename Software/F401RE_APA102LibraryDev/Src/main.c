@@ -56,9 +56,10 @@ DMA_HandleTypeDef hdma_spi3_tx;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 // === APA102 Strip Configurable Parameters ===
-#define APA102_STRIPLEN           144     // Length of APA102 LED Strip
+#define APA102_STRIPLEN           2     // Length of APA102 LED Strip
 #define APA102_SPI_HANDLE         hspi2   // SPI port connected to APA102 LED Strip
-#define APA102_MAX_CURRENT        1000    // Max current available for entire strip. (mA)
+#define APA102_CURRENT_LIMIT      0
+#define APA102_MAX_CURRENT        100000    // Max current available for entire strip. (mA)
 #define APA102_CHANNEL_CURRENT    20      // Current consumed by each channel (color). (mA)
 
 
@@ -70,9 +71,8 @@ DMA_HandleTypeDef hdma_spi3_tx;
 uint8_t APA102_StartFrameByte                                 = {0b00000000};
 uint8_t APA102_EndFrameByte                                   = {0b11111111};
 uint8_t APA102_Strip[APA102_STRIP_UPDATE_PACKET_BYTES]        = {0};
-uint8_t APA102_Strip_Buffer[APA102_STRIP_UPDATE_PACKET_BYTES] = {0};	// Buffer strip updates so that the strip array can be edited during DMA output operations.
+uint8_t APA102_Strip_Buffer[APA102_STRIP_UPDATE_PACKET_BYTES] = {0};    // Buffer strip updates so that the strip array can be edited during DMA output operations.
 #define APA102_MAX_STRIP_LENGTH  (APA102_START_FRAME_BYTES + (UINT_MAX / APA102_BYTES_PER_PIXEL) + APA102_END_FRAME_BYTES)
-
 
 // APA102_stripStatus - Global status of APA102 strip.  Primarily used to indicate whether a strip update is currently underway.
 typedef enum
@@ -90,6 +90,10 @@ typedef enum
   APA102_SUCCESS,
   APA102_FAILURE
 } APA102_result;
+
+//
+uint8_t beaconHardwareConfig = 0x00;
+
 
 /* USER CODE END PV */
 
@@ -109,6 +113,8 @@ APA102_result APA102_SetStrip(uint8_t, uint16_t, uint16_t);
 void HAL_SPI_TxCpltCallback (SPI_HandleTypeDef * hspi);
 uint8_t Intensity_To_Current(uint8_t);
 
+uint8_t BEACON_HardwareConfigCheck(void);
+
 
 /* USER CODE END PFP */
 
@@ -124,66 +130,69 @@ uint8_t Intensity_To_Current(uint8_t);
  */
 APA102_result APA102_Update()
 {
-	// Variable Declarations
-	uint32_t requiredCurrent = 0;
-	float    scalingFactor   = 0;
-	uint32_t position        = 0;
-	uint32_t pixel           = 0;
+    // Variable Declarations
+    uint32_t requiredCurrent = 0;
+    float    scalingFactor   = 0;
+    uint32_t position        = 0;
+    uint32_t pixel           = 0;
 
-	// Confirm that update isn't already underway.
-	if (APA102_stripStatus1 == APA102_UPDATING)
-	{
-		return APA102_SUCCESS;
-	}
+    // Confirm that update isn't already underway.
+    if (APA102_stripStatus1 == APA102_UPDATING)
+    {
+        return APA102_SUCCESS;
+    }
 
-	// Indicate that APA102 strip update is underway.
+    // Indicate that APA102 strip update is underway.
     APA102_stripStatus1 = APA102_UPDATING;
 
     // Check power requirements and scale to suit.
-    	// Calculate power needs of current frame.
-    	for (pixel = 0; pixel < APA102_STRIPLEN; pixel++)
-    	{
-			// Calculate desired pixel data's position in the strip array.
-			position = (APA102_START_FRAME_BYTES + (pixel * APA102_BYTES_PER_PIXEL));
+    if (APA102_CURRENT_LIMIT == 1)
+    {
+        // Calculate power needs of current frame.
+        for (pixel = 0; pixel < APA102_STRIPLEN; pixel++)
+        {
+            // Calculate desired pixel data's position in the strip array.
+            position = (APA102_START_FRAME_BYTES + (pixel * APA102_BYTES_PER_PIXEL));
 
-			// Convert intensity value into current consumption and add to tally.
-			requiredCurrent += Intensity_To_Current(APA102_Strip[position + 1]);	// RED Channel
-			requiredCurrent += Intensity_To_Current(APA102_Strip[position + 2]);	// GRN Channel
-			requiredCurrent += Intensity_To_Current(APA102_Strip[position + 3]);	// BLU Channel
-    	}
+            // Convert intensity value into current consumption and add to tally.
+            requiredCurrent += Intensity_To_Current(APA102_Strip[position + 1]);    // RED Channel
+            requiredCurrent += Intensity_To_Current(APA102_Strip[position + 2]);    // GRN Channel
+            requiredCurrent += Intensity_To_Current(APA102_Strip[position + 3]);    // BLU Channel
+        }
 
-    	// Determine scaling factor and scale back, if needed.
-    	if (requiredCurrent > APA102_MAX_CURRENT)
-    	{
-    		// Determine Scaling Factor
-    		scalingFactor = ((float) APA102_MAX_CURRENT / (float) requiredCurrent);
+        // Determine scaling factor and scale back, if needed.
+        if (requiredCurrent > APA102_MAX_CURRENT)
+        {
+            // Determine Scaling Factor
+              scalingFactor = ((float) APA102_MAX_CURRENT / (float) requiredCurrent);
 
-    		// Apply Scaling Factor
-        	for (pixel = 0; pixel < APA102_STRIPLEN; pixel++)
-        	{
-    			// Calculate desired pixel data's position in the strip array.
-    			position = (APA102_START_FRAME_BYTES + (pixel * APA102_BYTES_PER_PIXEL));
+              // Apply Scaling Factor
+            for (pixel = 0; pixel < APA102_STRIPLEN; pixel++)
+            {
+                    // Calculate desired pixel data's position in the strip array.
+                    position = (APA102_START_FRAME_BYTES + (pixel * APA102_BYTES_PER_PIXEL));
 
-    			// Convert intensity value into current consumption and add to tally.
-    			APA102_Strip[position + 1] *= scalingFactor; 	// RED Channel
-    			APA102_Strip[position + 2] *= scalingFactor; 	// GRN Channel
-				APA102_Strip[position + 3] *= scalingFactor; 	// BLU Channel
-        	}
-    	}
+                    // Convert intensity value into current consumption and add to tally.
+                    APA102_Strip[position + 1] *= scalingFactor;    // RED Channel
+                    APA102_Strip[position + 2] *= scalingFactor;    // GRN Channel
+                      APA102_Strip[position + 3] *= scalingFactor;  // BLU Channel
+            }
+        }
+    }
 
     // Copy pixel data into output buffer.
     memcpy(APA102_Strip_Buffer, APA102_Strip, APA102_STRIP_UPDATE_PACKET_BYTES);
 
     // Initiate DMA transmit of current pixel data.  Check HAL return status.
-	if (HAL_SPI_Transmit_DMA(&APA102_SPI_HANDLE, APA102_Strip_Buffer, APA102_STRIP_UPDATE_PACKET_BYTES) != HAL_OK)
-	{
-		APA102_stripStatus1 = APA102_ERROR;
-		return APA102_FAILURE;
-	}
-	else
-	{
-		return APA102_SUCCESS;
-	}
+    if (HAL_SPI_Transmit_DMA(&APA102_SPI_HANDLE, APA102_Strip_Buffer, APA102_STRIP_UPDATE_PACKET_BYTES) != HAL_OK)
+    {
+        APA102_stripStatus1 = APA102_ERROR;
+        return APA102_FAILURE;
+    }
+    else
+    {
+        return APA102_SUCCESS;
+    }
 
 }
 
@@ -196,42 +205,41 @@ APA102_result APA102_Update()
  */
 APA102_result APA102_Init()
 {
-	// Set strip status to UNKNOWN when initialized.
-	APA102_stripStatus1 = APA102_UNKNOWN;
+    // Set strip status to UNKNOWN when initialized.
+    APA102_stripStatus1 = APA102_UNKNOWN;
 
-	// Sanity check strip length
-	if (APA102_STRIPLEN > APA102_MAX_STRIP_LENGTH)
-	{
-		// Halt; cannot recover from a pixel strip data array that cannot be properly initialized.
-		_Error_Handler(__FILE__, __LINE__);
-	}
+    // Sanity check strip length
+    if (APA102_STRIPLEN > APA102_MAX_STRIP_LENGTH)
+    {
+        // Halt; cannot recover from a pixel strip data array that cannot be properly initialized.
+        _Error_Handler(__FILE__, __LINE__);
+    }
 
-	// Copy start frame data into strip update packet.
-	for (int i = 0; i < APA102_START_FRAME_BYTES; i++)
-	{
-	    APA102_Strip[i] = APA102_StartFrameByte;
-	}
-
-
-	// Copy end frame data into strip update packet.
-	int j = sizeof(APA102_Strip);
-	for (int i = 0; i < APA102_START_FRAME_BYTES; i++)
-	{
-	    APA102_Strip[j] = APA102_EndFrameByte;
-	    j--;
+    // Copy start frame data into strip update packet.
+    for (int i = 0; i < APA102_START_FRAME_BYTES; i++)
+    {
+        APA102_Strip[i] = APA102_StartFrameByte;
     }
 
 
-	// Initialize each pixel update frame to OFF
-	for (int i = APA102_START_FRAME_BYTES; i < (APA102_STRIP_UPDATE_PACKET_BYTES - APA102_END_FRAME_BYTES); i+=APA102_START_FRAME_BYTES)
-	{
-		// First three bits must be HIGH, remaining five are a global pixel brightness that we'll default to max for the time being.
-	    APA102_Strip[i] = 0b11111111;
-	}
+    // Copy end frame data into strip update packet.
+    int j = sizeof(APA102_Strip);
+    for (int i = 0; i < APA102_START_FRAME_BYTES; i++)
+    {
+        APA102_Strip[j] = APA102_EndFrameByte;
+        j--;
+    }
 
-	// Return Status
-	return APA102_SUCCESS;
 
+    // Initialize each pixel update frame to OFF
+    for (int i = APA102_START_FRAME_BYTES; i < (APA102_STRIP_UPDATE_PACKET_BYTES - APA102_END_FRAME_BYTES); i+=APA102_START_FRAME_BYTES)
+    {
+        // First three bits must be HIGH, remaining five are a global pixel brightness that we'll default to max for the time being.
+        APA102_Strip[i] = 0b11111111;
+    }
+
+    // Return Status
+    return APA102_SUCCESS;
 }
 
 
@@ -243,28 +251,28 @@ APA102_result APA102_Init()
  */
 APA102_result APA102_SetPixel(uint32_t pixel, uint8_t red, uint16_t grn, uint16_t blu)
 {
-	// Variable Declarations
-	uint32_t position = 0;
+    // Variable Declarations
+    uint32_t position = 0;
 
-	// Sanity check pixel number input
-	if (pixel > APA102_STRIPLEN)
-	{
-		return APA102_FAILURE;
-	}
+    // Sanity check pixel number input
+    if (pixel > APA102_STRIPLEN)
+    {
+        return APA102_FAILURE;
+    }
 
-	// Account for 0 based array
-	pixel --;
+    // Account for 0 based array
+    pixel --;
 
-	// Calculate desired pixel data's position in the strip array.
-	position = (APA102_START_FRAME_BYTES + (pixel * APA102_BYTES_PER_PIXEL));
+    // Calculate desired pixel data's position in the strip array.
+    position = (APA102_START_FRAME_BYTES + (pixel * APA102_BYTES_PER_PIXEL));
 
-	// Insert desired pixel data into strip array.
-	APA102_Strip[position + 1] = blu;
-	APA102_Strip[position + 2] = grn;
-	APA102_Strip[position + 3] = red;
+    // Insert desired pixel data into strip array.
+    APA102_Strip[position + 1] = blu;
+    APA102_Strip[position + 2] = grn;
+    APA102_Strip[position + 3] = red;
 
-	// Return Status
-	return APA102_SUCCESS;
+    // Return Status
+    return APA102_SUCCESS;
 }
 
 
@@ -276,14 +284,14 @@ APA102_result APA102_SetPixel(uint32_t pixel, uint8_t red, uint16_t grn, uint16_
  */
 APA102_result APA102_SetStrip(uint8_t red, uint16_t grn, uint16_t blu)
 {
-	// Update strip color, pixel by pixel.
-	for (int i = 1; i <= APA102_STRIPLEN; i++)
-	{
+    // Update strip color, pixel by pixel.
+    for (int i = 1; i <= APA102_STRIPLEN; i++)
+    {
         APA102_SetPixel(i, red, grn, blu);
-	}
+    }
 
-	// Return Status
-	return APA102_SUCCESS;
+    // Return Status
+    return APA102_SUCCESS;
 }
 
 
@@ -296,13 +304,10 @@ APA102_result APA102_SetStrip(uint8_t red, uint16_t grn, uint16_t blu)
  */
 uint8_t Intensity_To_Current(uint8_t channelIntensity)
 {
-	// (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    // TODO - Need to account for each pixel's quiescent current and take some measurements so something more accurate then an assummed linear relationship can be used for the scaling.
 
-	uint8_t channelCurrent;
-
-	channelCurrent = (channelIntensity - 0) * (APA102_CHANNEL_CURRENT - 0) / (255 - 0) + 0;
-
-	return channelCurrent;
+    // (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+    return (channelIntensity - 0) * (APA102_CHANNEL_CURRENT - 0) / (255 - 0) + 0;
 }
 
 
@@ -313,12 +318,38 @@ uint8_t Intensity_To_Current(uint8_t channelIntensity)
  */
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef * hspi)
 {
-	// Set flag indicating that APA102 strip update is complete.
+    // Set flag indicating that APA102 strip update is complete.
     if (hspi == &APA102_SPI_HANDLE)
     {
-    	APA102_stripStatus1 = APA102_IDLE;
+        APA102_stripStatus1 = APA102_IDLE;
     }
 
+}
+
+
+/*
+ * BEACON_HardwareConfigCheck -
+ *  arguments:
+ *    returns: Byte containing base configuration & beacon panel address.
+ */
+uint8_t BEACON_HardwareConfigCheck(void)
+{
+    /* TODO - Implement config init.
+     *
+     * Config byte format:
+     * 128 - Panel mode
+     * 064 - Panel mode
+     * 032 - Panel mode
+     * 016 - Panel address / mode config
+     * 008 - Panel address / mode config
+     * 004 - Panel address / mode config
+     * 002 - Panel address / mode config
+     * 001 - Panel address / mode config
+     *
+     * 0b111xxxxx - Slave mode.
+     */
+
+    return 0b11100001;
 }
 
 
@@ -327,10 +358,10 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef * hspi)
 uint8_t RxFlag = 0;
 void HAL_SPI_RxCpltCallback (SPI_HandleTypeDef * hspi)
 {
-	//
+    //
     if (hspi == &hspi3)
     {
-    	RxFlag = 0;
+        RxFlag = 0;
     }
 
 }
@@ -369,7 +400,17 @@ int main(void)
   MX_SPI3_Init();
 
   /* USER CODE BEGIN 2 */
+
+  // APA102 LED Strip Init
   APA102_Init();
+  APA102_SetStrip(0, 0, 0);
+  APA102_Update();
+
+  // System Power On Config & Address
+  beaconHardwareConfig = BEACON_HardwareConfigCheck();
+
+  // Mask out hardware config bits to leave just the panel address.
+  uint8_t beaconPanelAddress = beaconHardwareConfig & 0b00011111;
 
 
   /* USER CODE END 2 */
@@ -382,45 +423,34 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 
+      // Receive Update Packet
+      uint8_t packet[512] = {0};
 
+      if (RxFlag == 0)
+      //if (1)
+      {
+          //RxFlag = 1;
+          HAL_SPI_Receive(&hspi3, packet, 512, 1000);
 
-	  APA102_SetStrip(255, 255, 255);
-	  APA102_Update();
-	  HAL_Delay(500);
+          // Determine whether packet is addressed to this beacon panel.
+          if (packet[0] == beaconPanelAddress || packet[0] == 255)
+          {
+              switch (packet[1])
+              {
 
+                  // Individual Pixel Update
+                  case 0x01:
+                  break;
 
-	  APA102_SetStrip(0, 255, 0);
-	  APA102_Update();
-	  HAL_Delay(500);
+                  // Strip Update
+                  case 0x02:
+                  APA102_SetStrip(packet[2], packet[3], packet[4]);
+                  APA102_Update();
+                  break;
+              }
 
-
-	  /*
-	  //
-	  uint8_t packet[7] = {0};
-
-	  //
-	  if (RxFlag == 0)
-	  {
-	      RxFlag = 1;
-          HAL_SPI_Receive_DMA(&hspi3, packet, 6);
-	  }
-
-	  //
-	  if (packet[2] != 0)
-	  {
-		  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-
-		  packet[0] = 0;
-		  packet[1] = 0;
-		  packet[2] = 0;
-		  packet[3] = 0;
-		  packet[4] = 0;
-		  packet[5] = 0;
-		  packet[6] = 0;
-
-	  }
-	  */
-
+          }
+      }
 
   }
   /* USER CODE END 3 */
