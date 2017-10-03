@@ -202,13 +202,13 @@ F 3 "" H 11400 5950 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Text HLabel 5550 3000 0    60   Input ~ 0
-ESP_SS
+PI_SS
 Text HLabel 5550 3100 0    60   Input ~ 0
-ESP_SCLK
+PI_SCLK
 Text HLabel 5550 3200 0    60   Output ~ 0
-ESP_MISO
+PI_MISO
 Text HLabel 5550 3300 0    60   Input ~ 0
-ESP_MOSI
+PI_MOSI
 Text Label 5600 3900 2    60   ~ 0
 SWDIO
 Text Label 5600 4000 2    60   ~ 0

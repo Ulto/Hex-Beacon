@@ -104,9 +104,7 @@ Wire Wire Line
 	3800 4200 3800 4050
 Connection ~ 3800 2250
 Wire Wire Line
-	3800 2100 3800 2250
-Wire Wire Line
-	3800 2250 3800 2650
+	3800 2100 3800 2650
 Wire Wire Line
 	4050 2250 3800 2250
 Wire Wire Line
@@ -126,11 +124,11 @@ Wire Wire Line
 Wire Wire Line
 	2950 2850 3300 2850
 Text HLabel 4700 2850 2    60   Output ~ 0
-ESP_MOSI
+PI_MOSI
 Text HLabel 2950 2950 0    60   Input ~ 0
-ESP_MISO
+PI_MISO
 Text HLabel 4700 3050 2    60   Output ~ 0
-ESP_SCLK
+PI_SCLK
 Text HLabel 4700 3150 2    60   Output ~ 0
-ESP_SS
+PI_SS
 $EndSCHEMATC
