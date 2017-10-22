@@ -309,4 +309,6 @@ Wire Wire Line
 Wire Wire Line
 	8250 2250 8000 2250
 Connection ~ 8250 2100
+Text Notes 8350 1950 0    60   ~ 0
+TODO? Add fuse
 $EndSCHEMATC

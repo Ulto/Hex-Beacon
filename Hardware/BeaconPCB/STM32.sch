@@ -28,8 +28,6 @@ LIBS:opto
 LIBS:atmel
 LIBS:contrib
 LIBS:valves
-LIBS:STM32F042C6T6
-LIBS:crumpschemes
 LIBS:Hex-Beacons-cache
 EELAYER 25 0
 EELAYER END
@@ -525,7 +523,7 @@ Connection ~ 3050 6000
 Wire Wire Line
 	3050 5850 3050 6400
 Wire Wire Line
-	3300 6000 3050 6000
+	3050 6000 4700 6000
 Wire Wire Line
 	3550 6700 3950 6700
 Wire Wire Line
@@ -750,4 +748,16 @@ Wire Wire Line
 	6400 4600 5600 4600
 Wire Wire Line
 	6400 3000 5550 3000
+Wire Wire Line
+	3550 7500 3700 7500
+Wire Wire Line
+	3700 7500 3700 7600
+Wire Wire Line
+	3700 7600 3550 7600
+Wire Wire Line
+	3700 7550 4700 7550
+Wire Wire Line
+	4700 7550 4700 6000
+Connection ~ 3300 6000
+Connection ~ 3700 7550
 $EndSCHEMATC
