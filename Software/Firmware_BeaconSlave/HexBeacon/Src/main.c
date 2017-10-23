@@ -46,7 +46,7 @@
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
-extern SPI_HandleTypeDef hspi2;
+SPI_HandleTypeDef hspi2;
 SPI_HandleTypeDef hspi3;
 DMA_HandleTypeDef hdma_spi2_tx;
 DMA_HandleTypeDef hdma_spi3_rx;
@@ -59,7 +59,7 @@ DMA_HandleTypeDef hdma_spi3_tx;
 //
 uint8_t beaconHardwareConfig = 0x00;
 
-//
+
 // APA102_result - Return status for APA102 related function calls.
 typedef enum
 {

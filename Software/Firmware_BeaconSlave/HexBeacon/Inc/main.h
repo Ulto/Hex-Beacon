@@ -66,7 +66,7 @@
 #define SWO_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-//extern SPI_HandleTypeDef hspi2;
+extern SPI_HandleTypeDef hspi2;    // APA102 LED Strip
 
 /* USER CODE END Private defines */
 

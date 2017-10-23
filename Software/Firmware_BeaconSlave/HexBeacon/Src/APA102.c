@@ -1,9 +1,6 @@
 #include "APA102.h"
 //#include "stm32f4xx_hal.h"
 
-#include "main.c"
-
-
 
 /*
  * APA102_Update - Initiates DMA transmit of current pixel data.  Scales channel brightness to fit
@@ -68,7 +65,7 @@ APA102_result APA102_Update()
     memcpy(APA102_Strip_Buffer, APA102_Strip, APA102_STRIP_UPDATE_PACKET_BYTES);
 
     // Initiate DMA transmit of current pixel data.  Check HAL return status.
-    if (HAL_SPI_Transmit_DMA(&hspi2, APA102_Strip_Buffer, APA102_STRIP_UPDATE_PACKET_BYTES) != HAL_OK)
+    if (HAL_SPI_Transmit_DMA(&APA102_SPI_HANDLE, APA102_Strip_Buffer, APA102_STRIP_UPDATE_PACKET_BYTES) != HAL_OK)
     {
         APA102_stripStatus1 = APA102_ERROR;
         return APA102_FAILURE;
