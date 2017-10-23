@@ -26,6 +26,12 @@ APA102_result APA102_Update()
     // Indicate that APA102 strip update is underway.
     APA102_stripStatus1 = APA102_UPDATING;
 
+    // Just going to leave this here and see if Greg notices.
+    for (int i; i < MAX_BLINKY; i++)
+    {
+    	HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    }
+
     // Check power requirements and scale to suit, if enabled.
     if (APA102_CURRENT_LIMIT_ENABLE == 1)
     {
@@ -164,7 +170,7 @@ APA102_result APA102_SetPixel(uint32_t pixel, uint8_t red, uint16_t grn, uint16_
  */
 APA102_result APA102_SetStrip(uint8_t red, uint16_t grn, uint16_t blu)
 {
-    // Update strip color, pixel by pixel.
+    // Update strip color, pixel by pixel.  TODO- Optimize this loop with some fancy schmancy DMA like magic?
     for (int i = 1; i <= APA102_STRIPLEN; i++)
     {
         APA102_SetPixel(i, red, grn, blu);

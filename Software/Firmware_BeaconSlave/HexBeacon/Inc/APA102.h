@@ -20,11 +20,12 @@
 #define APA102_START_FRAME_BYTES         4
 #define APA102_END_FRAME_BYTES           12
 #define APA102_STRIP_UPDATE_PACKET_BYTES (APA102_START_FRAME_BYTES + (APA102_STRIPLEN * APA102_BYTES_PER_PIXEL) + APA102_END_FRAME_BYTES)
+#define MAX_BLINKY                       7
 uint8_t APA102_StartFrameByte                                 = {0b00000000};
 uint8_t APA102_EndFrameByte                                   = {0b11111111};
 uint8_t APA102_Strip[APA102_STRIP_UPDATE_PACKET_BYTES]        = {0};
-uint8_t APA102_Strip_Buffer[APA102_STRIP_UPDATE_PACKET_BYTES] = {0};    // Buffer strip updates so that the strip array can be edited during DMA output operations.
-#define APA102_MAX_STRIP_LENGTH  (APA102_START_FRAME_BYTES + (UINT_MAX / APA102_BYTES_PER_PIXEL) + APA102_END_FRAME_BYTES)
+uint8_t APA102_Strip_Buffer[APA102_STRIP_UPDATE_PACKET_BYTES] = {0};    // Buffer strip updates so that the strip data array can be edited during DMA output operations.
+#define APA102_MAX_STRIP_LENGTH  (APA102_START_FRAME_BYTES + (UINT_MAX / APA102_BYTES_PER_PIXEL) + APA102_END_FRAME_BYTES)    // Presently, this calculation assumes the only limiting factor in play is the max value of an unisgned int.  YMMV, likely by a lot.
 
 // APA102_stripStatus - Global status of APA102 strip.  Primarily used to indicate whether a strip update is currently underway.
 typedef enum
